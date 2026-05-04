@@ -46,6 +46,9 @@
 #include <uapi/linux/fs.h>
 #include <linux/android_vendor.h>
 
+// In fs/namespace.c
+EXPORT_SYMBOL(path_umount);
+
 struct backing_dev_info;
 struct bdi_writeback;
 struct bio;

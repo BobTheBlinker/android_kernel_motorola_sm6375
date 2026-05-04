@@ -42,6 +42,33 @@ static unsigned int m_hash_shift __read_mostly;
 static unsigned int mp_hash_mask __read_mostly;
 static unsigned int mp_hash_shift __read_mostly;
 
+# UMOUNT Backport
+static int can_umount(const struct path *path, int flags)
+{
+    struct mount *mnt = real_mount(path->mnt);
+    if (!may_mount())
+        return -EPERM;
+    if (!path_mounted(path))
+        return -EINVAL;
+    if (!check_mnt(mnt))
+        return -EINVAL;
+    if (mnt->mnt.mnt_flags & MNT_LOCKED)
+        return -EINVAL;
+    if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
+        return -EPERM;
+    return 0;
+}
+int path_umount(struct path *path, int flags)
+{
+    struct mount *mnt = real_mount(path->mnt);
+    int ret;
+
+    ret = can_umount(path, flags);
+    if (!ret)
+        ret = do_umount(mnt, flags);
+    return ret;
+}
+
 static __initdata unsigned long mhash_entries;
 static int __init set_mhash_entries(char *str)
 {
