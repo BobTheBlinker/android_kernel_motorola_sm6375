@@ -75,6 +75,14 @@
 
 #include "uid16.h"
 
+#ifdef CONFIG_KSU_SUSFS
+#include <linux/susfs.h>
+
+extern long ksu_handle_susfs_prctl(int option, unsigned long arg2,
+				   unsigned long arg3, unsigned long arg4,
+				   unsigned long arg5);
+#endif
+
 #include <trace/hooks/sys.h>
 
 #ifndef SET_UNALIGN_CTL
@@ -1247,6 +1255,9 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 	down_read(&uts_sem);
 	memcpy(&tmp, utsname(), sizeof(tmp));
 	up_read(&uts_sem);
+#ifdef CONFIG_KSU_SUSFS_SPOOF_UNAME
+	susfs_spoof_uname(&tmp);
+#endif
 	if (copy_to_user(name, &tmp, sizeof(tmp)))
 		return -EFAULT;
 
@@ -2429,6 +2440,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 	struct task_struct *me = current;
 	unsigned char comm[sizeof(me->comm)];
 	long error;
+
+#ifdef CONFIG_KSU_SUSFS
+	error = ksu_handle_susfs_prctl(option, arg2, arg3, arg4, arg5);
+	if (error != -ENOSYS)
+		return error;
+#endif
 
 	error = security_task_prctl(option, arg2, arg3, arg4, arg5);
 	if (error != -ENOSYS)
