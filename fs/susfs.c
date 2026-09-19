@@ -1172,8 +1172,13 @@ int susfs_sus_memfd(char *memfd_name) {
 
 static void umount_mnt(struct path *path, int flags) {
 	int err = path_umount(path, flags);
+
+	/*
+	 * path_umount() consumes the path references, so do not
+	 * dereference path after it returns.
+	 */
 	if (err) {
-		SUSFS_LOGI("umount %s failed: %d\n", path->dentry->d_iname, err);
+		SUSFS_LOGI("umount failed: %d\n", err);
 	}
 }
 
@@ -1206,14 +1211,19 @@ static void try_umount(const char *mnt, bool check_mnt, int flags) {
 
 	if (path.dentry != path.mnt->mnt_root) {
 		// it is not root mountpoint, maybe umounted by others already.
+		path_put(&path);
 		return;
 	}
 
 	// we are only interest in some specific mounts
 	if (check_mnt && !should_umount(&path)) {
+		path_put(&path);
 		return;
 	}
-	
+
+	/*
+	 * Successful handoff: path_umount() consumes these references.
+	 */
 	umount_mnt(&path, flags);
 }
 
