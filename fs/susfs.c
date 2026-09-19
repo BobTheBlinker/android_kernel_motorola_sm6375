@@ -936,7 +936,16 @@ do_spoof:
 		cursor->info.target_prot, cursor->info.target_addr_size, cursor->info.spoofed_pathname,
 		cursor->info.spoofed_ino, cursor->info.spoofed_dev, cursor->info.spoofed_pgoff,
 		cursor->info.spoofed_prot);
-		return 2;
+		/*
+		 * show_map_vma() treats return value 2 as a request to print
+		 * out_name and skip normal pathname handling. Only return 2
+		 * when SUSFS actually supplied a spoofed pathname.
+		 *
+		 * For metadata-only spoofing, return 1 so the modified maps
+		 * fields are retained while seq_file_path() still prints the
+		 * original mapping pathname.
+		 */
+		return cursor->info.need_to_spoof_pathname ? 2 : 1;
 	}
 	return 0;
 }
